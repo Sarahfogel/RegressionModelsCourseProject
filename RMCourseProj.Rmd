@@ -1,0 +1,118 @@
+---
+title: "Regression Models Course Project"
+
+output: pdf_document
+---
+
+## Executive Summary
+This analysis uses the mtcars dataset available in R.  According to the help file for this data set, "this data was extracted from the 1974 Motor Trend US magazine, and  comprises fuel consumption and 10 aspects of automobile design and performance for 32 automobiles (1973–74 models)."  The goal of this analysis is to answer the question "Is an automatic or manual transmission better for MPG?" and to "Quantify the MPG difference between automatic and manual transmissions."  The analysis will show that a manual transmission provides better fuel economy and that in a car with average horse power, and a 4 cylinder, straight engine, a manual transmission that expected difference is about 5.2 miles per gallon.
+
+## Exploratory Data Analysis
+In order to decide which variables are appropriate for inclusion attempts to determine the effect of transmission type on fule efficiency, some exploratory data analysis was done.
+Note that prior to this analysis, some pre-processing was performed on the data.  This can be found in the appendix.  A summary of the data can be found in the appendix as well.
+
+```{r, echo=FALSE}
+    data(mtcars)
+# Replace automatic/manual factor with descriptive terms
+    mtcars$am[which(mtcars$am==0)]<-"Automatic Trasmission"
+    mtcars$am[which(mtcars$am==1)]<-"Manual Transmission"
+    mtcars$am<-as.factor(mtcars$am)
+
+# Replace "vs" factor with descriptive terms
+    mtcars$vs[which(mtcars$vs==0)]<-"V Engine"
+    mtcars$vs[which(mtcars$vs==1)]<-"Straight Engine"
+    mtcars$vs<-as.factor(mtcars$vs)
+
+# Convert cylinders, # of gears, and # of carburators to factors
+    mtcars$cyl<-as.factor(mtcars$cyl)
+    mtcars$gear<-as.factor(mtcars$gear)
+    mtcars$carb<-as.factor(mtcars$carb)
+```
+
+The oucome of interest - mpg by transmission type - is graphed below.
+```{r, echo=FALSE, results='hide', message=FALSE}
+    require(lattice)
+```
+```{r, echo=FALSE, fig.height=3}
+    bwplot(mpg~am, data=mtcars)
+```
+From this plot it is clear to see that manual transmissions have better fule economy. However, it is unknown if this will hold true when other variables are controlled for.
+
+## Linear Models
+
+Several models will be presemnted and analyzed below.  Three main creteria will be used to evaluate the appropriateness of each model.  1. The adjusted R-squared, 2. The interpretablility of the model (e.g. how much sense does it make to include the included variables), and 3. The signifigance of the term of interest - the trasmission type variable.
+
+The first model is the model which contains only the fuel efficiency and transmission type variables.  The coefficients and adjusted R-squared of which are below.
+```{r, echo=FALSE}
+    lm.simple<-lm(mpg~am, data=mtcars)
+    summary(lm.simple)[c(4,9)]
+```
+The benefits of this model are that it is very interpretable and that the Transmission term is significant.  However, no ohter factors are accounted for and the adjusted R-squared is low.  
+
+The second model is the model which contains all of the variables in the mtcars dataset. The adjusted R-squared of which is presented below.  For space considerations, the coefficients of this model appear in the appendix.
+```{r, echo=FALSE}
+    lm.all<-lm(mpg~., data=mtcars)
+    summary(lm.all)[c(9)]
+```
+The benefit of this model is that all variables are accounted for and that the adjusted R-squared is much higher than the first model. However, it is not clear that it is appropriate to include all of the variables.  Many may be measuring almost the same thing or may be simply unrelated.  The transmission term in the model is not significant, likely due to a high number of other terms causing overfitting.
+
+The third and final model that will be included here is the model that predicts fuel economy using the transmission type, horse power, number of cylinders, and engine shape variables. For the sake of later interpretablity, the horse power variable has been replaced by the difference between the horse power and the mean horse power.  The coefficients and adjusted R-squared of which are below.
+
+```{r, echo=FALSE}
+    hpavg<-mean(mtcars$hp)-mtcars$hp
+    lm.hp.cyl.vs<-lm(mpg~am+hpavg+cyl+vs, data=mtcars)
+    summary(lm.hp.cyl.vs)[c(4,9)]
+```
+The benefits of this model are that the included variables make sense because they each have an obvious effect on fuel economy (see the appendix for plots demostrating each of these effects.)  This model also has a higher adjusted R-squared than either previous model.  Finally, the term regarding the transmission type is significant in this model.  That makes interpreting that coefficient more meaningful.  Several diagnostic plots of this model appear in the appendix.  No major issues appear in them.
+
+
+## Conclusions
+The final model (and, in fact, all of the models included) show that manual transmissions had better fuel efficiency in 1974.  The model has a positive coefficient for the "Manual Transmission" term.  This matches what we expected from the initial exploratory analysis.
+
+This model tells us that if a car changes from the base case - automatic transmission, average horse power, 4 cylinders, and a straight engine - and switches to a manual transmission, it can expect to gain 5.16 miles per gallon of fuel efficiency.  The 95% confidence interval for this value is [`r confint(lm.hp.cyl.vs)[2,]`]:
+
+
+## Appendix
+### Pre-processing
+```{r, echo=TRUE, eval=FALSE}
+     data(mtcars)
+# Replace automatic/manual factor with descriptive terms
+    mtcars$am[which(mtcars$am==0)]<-"Automatic Trasmission"
+    mtcars$am[which(mtcars$am==1)]<-"Manual Transmission"
+    mtcars$am<-as.factor(mtcars$am)
+
+# Replace "vs" factor with descriptive terms
+    mtcars$vs[which(mtcars$vs==0)]<-"V Engine"
+    mtcars$vs[which(mtcars$vs==1)]<-"Straight Engine"
+    mtcars$vs<-as.factor(mtcars$vs)
+
+# Convert cylinders, # of gears, and # of carburators to factors
+    mtcars$cyl<-as.factor(mtcars$cyl)
+    mtcars$gear<-as.factor(mtcars$gear)
+    mtcars$carb<-as.factor(mtcars$carb)
+```
+
+### Summary of mtcars data
+```{r, echo=FALSE}
+    summary(mtcars)
+```
+
+### Coefficients of linear model with all variables
+
+```{r, echo=FALSE}
+    summary(lm.all)[c(4)]
+```
+
+### Effects of included variables on fuel economy
+```{r, echo=FALSE, fig.height=3}
+    bwplot(mpg~am|vs, data=mtcars, main="Fuel Economy by Trasmission and Engine Type")
+    bwplot(mpg~am|cyl, data=mtcars, main="Fuel Economy by Transmission and Number of Cylinders")
+    bwplot(mpg~am|cut(hp,4), data=mtcars, main="Fuel Economy by Transmission and Horse Power")
+```
+
+### Diagnostic Plots on Final Model
+```{r, echo=FALSE}
+    par(mfrow=c(2,2))
+    plot(lm.hp.cyl.vs)
+    par(mfrow=c(1,1))
+```
